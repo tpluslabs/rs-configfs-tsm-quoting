@@ -1,0 +1,10 @@
+[package]
+name = "client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tempfile = "3.3"
+const_format = "0.2.34"
+anyhow = "1.0.96"
+thiserror = "2.0.11"

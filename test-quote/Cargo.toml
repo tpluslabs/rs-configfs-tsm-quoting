@@ -1,0 +1,8 @@
+[package]
+name = "test-quote"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+client = {workspace=true}
+hex = {workspace=true}
