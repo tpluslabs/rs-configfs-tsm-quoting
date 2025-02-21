@@ -157,7 +157,6 @@ pub fn create_open_report(client: Client) -> io::Result<OpenReport> {
     let entry = client.mkdir_temp(REPORT_SUBSYSTEM_PATH, "entry")
         .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("could not create report entry in configfs: {}", e)))?;
     
-    println!("created temp dir {}", entry.to_str().unwrap());
     unsafe_wrap(client, entry.to_str().unwrap())
 }
 
