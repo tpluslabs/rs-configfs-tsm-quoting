@@ -17,5 +17,5 @@ fn main() {
     let mut report = report::create(client, request).unwrap();
     let result = report.get().unwrap().out_blob;
 
-    println!("{:?}", result)
+    println!("{}", hex::encode(result))
 }
