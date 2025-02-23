@@ -2,5 +2,5 @@
 members = ["client", "test-quote"]
 
 [workspace.dependencies]
-client = {path = "./client"}
+tsm-client = {path = "./client"}
 hex = "0.4.3"

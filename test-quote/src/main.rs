@@ -1,4 +1,4 @@
-use client::{make_client, report::{self, Request}};
+use tsm_client::{make_client, report::{self, Request}};
 
 // You can use teenonce=$(head -c 64 /dev/urandom | xxd -p | tr -d '\n') to generate a
 // random hex report.
