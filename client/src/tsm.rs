@@ -1,13 +1,12 @@
+use crate::client::Client;
+use const_format::concatcp;
 use std::fs;
 use std::io::{self, ErrorKind};
 use std::num::ParseIntError;
 use std::path::Path;
-use const_format::concatcp;
-use crate::client::Client;
 pub const TSM_PREFIX: &str = "/sys/kernel/config/tsm";
 pub const REPORT_SUBSYSTEM: &str = "report";
 pub const REPORT_SUBSYSTEM_PATH: &str = concatcp!(TSM_PREFIX, "/", REPORT_SUBSYSTEM);
-
 
 #[derive(Debug, Clone)]
 pub struct TsmPath {
@@ -23,6 +22,11 @@ impl TsmPath {
             None => format!("{}/{}/{}", TSM_PREFIX, self.subsystem, self.entry),
         }
     }
+
+    pub fn with_attr(mut self, attr: &str) -> Self {
+        self.attribute = Some(attr.to_string());
+        self
+    }
 }
 
 fn kstrtouint(data: &[u8], base: u32, _bits: u32) -> Result<u64, ParseIntError> {
@@ -32,24 +36,51 @@ fn kstrtouint(data: &[u8], base: u32, _bits: u32) -> Result<u64, ParseIntError> 
 
 pub fn read_uint64_file(client: &Client, p: &str) -> io::Result<u64> {
     let data = client.read_file(p)?;
-    kstrtouint(&data, 10, 64).map_err(|e| io::Error::new(io::ErrorKind::Other, format!("could not read {}: {}", p, e)))
+    kstrtouint(&data, 10, 64)
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("could not read {}: {}", p, e)))
 }
 
 pub fn parse_tsm_path(filepath: &str) -> io::Result<TsmPath> {
-    let s = Path::new(filepath).to_str().ok_or_else(|| io::Error::new(ErrorKind::InvalidInput, "invalid UTF-8"))?;
+    let s = Path::new(filepath)
+        .to_str()
+        .ok_or_else(|| io::Error::new(ErrorKind::InvalidInput, "invalid UTF-8"))?;
     if !s.starts_with(TSM_PREFIX) {
-        return Err(io::Error::new(ErrorKind::InvalidInput, format!("{:?} does not begin with {:?}", s, TSM_PREFIX)));
+        return Err(io::Error::new(
+            ErrorKind::InvalidInput,
+            format!("{:?} does not begin with {:?}", s, TSM_PREFIX),
+        ));
     }
     let rest = s[TSM_PREFIX.len()..].trim_start_matches('/');
     if rest.is_empty() {
-        return Err(io::Error::new(ErrorKind::InvalidInput, format!("{:?} does not contain a subsystem", s)));
+        return Err(io::Error::new(
+            ErrorKind::InvalidInput,
+            format!("{:?} does not contain a subsystem", s),
+        ));
     }
     let parts: Vec<&str> = rest.split('/').collect();
     match parts.len() {
-        1 => Ok(TsmPath { subsystem: parts[0].to_string(), entry: String::new(), attribute: None }),
-        2 => Ok(TsmPath { subsystem: parts[0].to_string(), entry: parts[1].to_string(), attribute: None }),
-        3 => Ok(TsmPath { subsystem: parts[0].to_string(), entry: parts[1].to_string(), attribute: Some(parts[2].to_string()) }),
-        _ => Err(io::Error::new(ErrorKind::InvalidInput, format!("{:?} suffix expected to be of form subsystem[/entry[/attribute]]", rest))),
+        1 => Ok(TsmPath {
+            subsystem: parts[0].to_string(),
+            entry: String::new(),
+            attribute: None,
+        }),
+        2 => Ok(TsmPath {
+            subsystem: parts[0].to_string(),
+            entry: parts[1].to_string(),
+            attribute: None,
+        }),
+        3 => Ok(TsmPath {
+            subsystem: parts[0].to_string(),
+            entry: parts[1].to_string(),
+            attribute: Some(parts[2].to_string()),
+        }),
+        _ => Err(io::Error::new(
+            ErrorKind::InvalidInput,
+            format!(
+                "{:?} suffix expected to be of form subsystem[/entry[/attribute]]",
+                rest
+            ),
+        )),
     }
 }
 
@@ -57,11 +88,13 @@ pub fn make_client() -> io::Result<Client> {
     let check = Path::new(REPORT_SUBSYSTEM_PATH);
     let metadata = fs::metadata(check)?;
     if !metadata.is_dir() {
-        return Err(io::Error::new(io::ErrorKind::Other, format!("expected {} to be a directory", check.display())));
+        return Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!("expected {} to be a directory", check.display()),
+        ));
     }
     Ok(Client)
 }
-
 
 #[cfg(test)]
 mod tests {

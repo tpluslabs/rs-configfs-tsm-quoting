@@ -1,7 +1,9 @@
-use std::io::{self, ErrorKind};
-use anyhow::Result;
-use crate::tsm::{parse_tsm_path, read_uint64_file, TsmPath, REPORT_SUBSYSTEM, REPORT_SUBSYSTEM_PATH};
 use crate::client::Client;
+use crate::tsm::{
+    parse_tsm_path, read_uint64_file, TsmPath, REPORT_SUBSYSTEM, REPORT_SUBSYSTEM_PATH,
+};
+use anyhow::Result;
+use std::io::{self, ErrorKind};
 
 #[derive(Debug, Default)]
 pub struct Privilege {
@@ -36,15 +38,14 @@ pub struct Response {
     pub manifest_blob: Option<Vec<u8>>,
 }
 
-
 #[derive(Debug, thiserror::Error)]
 pub enum ReportError {
     #[error("Error while generating")]
     GenerationErr {
         got: u64,
         want: u64,
-        attribute: String
-    }
+        attribute: String,
+    },
 }
 
 impl OpenReport {
@@ -69,16 +70,20 @@ impl OpenReport {
     pub fn read_option(&self, subtree: &str) -> Result<Vec<u8>> {
         let path = self.attribute(subtree);
         let data = self.client.read_file(&path).map_err(|e| {
-            io::Error::new(ErrorKind::Other, format!("could not read report property {:?}: {}", subtree, e))
+            io::Error::new(
+                ErrorKind::Other,
+                format!("could not read report property {:?}: {}", subtree, e),
+            )
         })?;
         let generation_path = self.attribute("generation");
         let got_generation = read_uint64_file(&self.client, &generation_path)?;
         if got_generation != self.expected_generation {
             return Err(anyhow::anyhow!(ReportError::GenerationErr {
-                    got: got_generation,
-                    want: self.expected_generation,
-                    attribute: subtree.to_string(),
-                }).into());
+                got: got_generation,
+                want: self.expected_generation,
+                attribute: subtree.to_string(),
+            })
+            .into());
         }
         Ok(data)
     }
@@ -111,17 +116,26 @@ impl OpenReport {
 
         if self.get_aux_blob {
             resp.aux_blob = Some(self.read_option("auxblob").map_err(|e| {
-                io::Error::new(ErrorKind::Other, format!("could not read report auxblob: {}", e))
+                io::Error::new(
+                    ErrorKind::Other,
+                    format!("could not read report auxblob: {}", e),
+                )
             })?);
         }
         resp.out_blob = self.read_option("outblob").map_err(|e| {
-            io::Error::new(ErrorKind::Other, format!("could not read report outblob: {}", e))
+            io::Error::new(
+                ErrorKind::Other,
+                format!("could not read report outblob: {}", e),
+            )
         })?;
         let provider_data = self.read_option("provider")?;
         resp.provider = String::from_utf8(provider_data).unwrap_or_default();
         if !self.service_provider.is_empty() {
             resp.manifest_blob = Some(self.read_option("manifestblob").map_err(|e| {
-                io::Error::new(ErrorKind::Other, format!("could not read report manifestblob: {}", e))
+                io::Error::new(
+                    ErrorKind::Other,
+                    format!("could not read report manifestblob: {}", e),
+                )
             })?);
         }
         Ok(resp)
@@ -154,9 +168,15 @@ pub fn unsafe_wrap(client: Client, entry_path: &str) -> io::Result<OpenReport> {
 }
 
 pub fn create_open_report(client: Client) -> io::Result<OpenReport> {
-    let entry = client.mkdir_temp(REPORT_SUBSYSTEM_PATH, "entry")
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("could not create report entry in configfs: {}", e)))?;
-    
+    let entry = client
+        .mkdir_temp(REPORT_SUBSYSTEM_PATH, "entry")
+        .map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!("could not create report entry in configfs: {}", e),
+            )
+        })?;
+
     unsafe_wrap(client, entry.to_str().unwrap())
 }
 
@@ -165,6 +185,6 @@ pub fn create(client: Client, req: Request) -> io::Result<OpenReport> {
     r.in_blob = req.in_blob;
     r.privilege = req.privilege;
     r.get_aux_blob = req.get_aux_blob;
-    
+
     Ok(r)
 }
